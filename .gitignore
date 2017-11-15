@@ -68,7 +68,7 @@ target/
 
 # Temporary data
 .ipynb_checkpoints/
-
+*.zip
 
 ###OSX###
 
@@ -77,7 +77,8 @@ target/
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*

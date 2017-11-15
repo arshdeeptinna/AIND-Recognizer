@@ -77,7 +77,18 @@ class SelectorBIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        try:
+            best_choice = []
+            for num_states in range(self.min_n_components, self.max_n_components + 1):
+                model = self.base_model(num_states)
+                log_likelihood = model.score(self.X, self.lengths)
+                p = ( num_states ** 2 ) + ( 2 * num_states * num_data_points ) - 1
+                bic = -2*log_likelihood + p * np.log(self.lengths)
+                if not best_choice or best_choice[0] < bic:
+                    best_choice = [bic, model]
+        except Exception as e:
+            pass
+        return best_choice[1] if best_choice else self.base_model(self.n_constant)
 
 
 class SelectorDIC(ModelSelector):
@@ -93,8 +104,22 @@ class SelectorDIC(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        best_score = float('-inf')
+        best_model = None
+        for num_states in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                model = self.base_model(num_states)
+                scores = []
+                for word, (X, lengths) in self.hwords.items():
+                    if word != self.this_word:
+                        scores.append(model.score(X, lengths))
+                dic = model.score(self.X, self.lengths) - np.mean(scores)
+                if dic > best_score:
+                    best_score = dic
+                    best_model = model
+            except:
+                continue
+        return best_model if best_model else self.base_model(self.n_constant)
 
 
 class SelectorCV(ModelSelector):
@@ -106,4 +131,17 @@ class SelectorCV(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection using CV
-        raise NotImplementedError
+        try:
+            best_choice = []
+            for num_states in range(self.min_n_components, self.max_n_components + 1):
+                model = self.base_model(num_states)
+                log_likelihoods = []
+                for train_idx, test_idx in KFold().split(self.sequences):
+                    test_X, test_length = combine_sequences(test_idx, self.sequences)
+                    log_likelihoods.append(model.score(test_X, test_length))
+                mean_score = np.mean(log_likelihoods)
+                if not best_choice or best_choice[0] < mean_score:
+                        best_choice = [mean_score, model]
+        except Exception as e:
+            pass
+        return best_choice[1] if best_choice else self.base_model(self.n_constant)
